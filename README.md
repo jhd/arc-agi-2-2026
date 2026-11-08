@@ -1,8 +1,8 @@
+BLUF: Average your checkpoints and see what happens
+
 # ARC 2: Weight Averaging for Generalisation
 
-*Improve generalisation of models by combining divergent pretraining lineages with weight averaging*
-
-ARC Prize 2026 Paper Track entry by jayachdee. This is a copy of the [Kaggle writeup](https://www.kaggle.com/competitions/arc-prize-2026-paper-track/writeups/new-writeup-1793986007418).
+This is a copy of the [Kaggle writeup](https://www.kaggle.com/competitions/arc-prize-2026-paper-track/writeups/new-writeup-1793986007418).
 
 ## Approach
 
