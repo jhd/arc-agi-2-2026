@@ -1,8 +1,10 @@
-BLUF: Average your checkpoints and see what happens
-
 # ARC 2: Weight Averaging for Generalisation
 
-This is a copy of the [Kaggle writeup](https://www.kaggle.com/competitions/arc-prize-2026-paper-track/writeups/new-writeup-1793986007418).
+**BLUF: Average your checkpoints and see what happens.**
+
+A 50M-parameter model trained from scratch scores **12.08** on the ARC-AGI-2 public leaderboard and solves 22 of 167 Public Eval queries. It is the fine-tuned weight average of three branches of one training run.
+
+This is a copy of the [Kaggle writeup](https://www.kaggle.com/competitions/arc-prize-2026-paper-track/writeups/new-writeup-1793986007418), with small corrections and a limitations section added.
 
 ## Approach
 
@@ -46,9 +48,9 @@ Each update was 64k tokens. Each update runs the model looped once (33% of updat
 
 ### Test Time Training
 
-For each test task, all weights are fine-tuned on that task's demonstrations. Each demo example takes a turn as the query, under rotations, reflections and colour permutations drawn from 1,000 total augementations. Training  stops after 120 updates. This number was hardcoded based on testing of running TTT on the training set and is constant at run time. The adapted model decodes the test input under 16 views, maps each candidate back to the original frame, and ranks candidates by their likelihood summed over all 16 views. The top two are submitted as the model's answer.
+For each test task, all weights are fine-tuned on that task's demonstrations. Each demo example takes a turn as the query, under rotations, reflections and colour permutations drawn from 1,000 total augmentations. Training stops after 120 updates. This number was fixed after Public Eval tests of one hardmix run, which solved 21, 18 and 20 queries at 120, 200 and 300 updates. It is constant at run time. The adapted model decodes the test input under 16 views, maps each candidate back to the original frame, and ranks candidates by their likelihood summed over all 16 views. The top two are submitted as the model's answer.
 
-For the final submission a scheduler predicts each task's time cost, updates the prediction as tasks finish, and falls back to 80, 40, 20 or 0 updates to ensure that all inputs fit in the time limit. Based on the eval set timing all examples likely got the full 120 updates. A 120-task Public Eval run costs about 6 RTX 5090 hours.
+For the final submission a scheduler predicts each task's time cost, updates the prediction as tasks finish, and falls back to 80, 40, 20 or 0 updates to ensure that all inputs fit in the time limit. The scheduler projected 2.2 of the 11.2 available hours for the hidden test set, so every task likely got the full 120 updates; the actual run time was not recorded. A 120-task Public Eval run costs about 6 GPU-hours on rented 16 GB GPUs.
 
 ## Weight Averaging
 
@@ -69,7 +71,7 @@ I first tried to merge the gains of single-rule drills back into the base model.
 
 Averaging the drilled checkpoints kept 4% or less of their gains and raised ARC validation loss by 6 - 27%. Distillation kept about 70% of the gains in a 9-rule test, at a 3% rise in ARC validation loss. Distilling all 1,096 drilled checkpoints, with the top 250 at 10× weight, raised ARC validation loss by 7% and held-out generated-rule loss by 3%. No gains appeared outside the drilled rules.
 
-The low cosine similarity between drills explains indicates that each drill moves the weights in an unrelated direction, so averaging cancels out problem-specific learning, but do not share a common movement towards a general logic solution. 
+The low cosine similarity between drills indicates that each drill moves the weights in an unrelated direction. Averaging cancels this problem-specific learning, and the drills share no common movement towards a general logic solution.
 
 ## Results
 
@@ -81,7 +83,7 @@ The low cosine similarity between drills explains indicates that each drill move
 | A3 | .0468 | 18 | - |
 | A3-ft | .0580 | 22 | 12.08 |
 
-Noise is about ±2 Public Eval queries and ±0.4 leaderboard points. The same A3-ft weights scored 11.67 on Kaggle's T4 GPUs. A3-ft solves 3 queries no parent solved and loses 3 that a parent solved. Validation loss does not well correlate with the Public Leaderboard score, other models developed during testing showed almost no correlation.
+Noise is about ±2 Public Eval queries and ±0.4 leaderboard points. The same A3-ft weights scored 11.67 on Kaggle's T4 GPUs. A3-ft solves 3 queries no parent solved and loses 3 that a parent solved. Validation loss does not correlate well with the Public Leaderboard score: across eight submitted models the rank correlation was .05.
 
 | A3-ft inference | Public Eval solve@2 (of 167) |
 | --- | --- |
@@ -94,11 +96,17 @@ Noise is about ±2 Public Eval queries and ±0.4 leaderboard points. The same A3
 
 Three branches of one run, trained apart on different data for a third or more of their training, averaged into a model with lower validation loss than any branch. A short fine-tune of that average gave the best Public Eval and leaderboard score. Single-rule drills could not be combined this way, because their weight changes point in unrelated directions. Test time training and multi-view ranking account for most of the final score (2 → 22).
 
-Future work could:
-- Vary the branch point(s)
+Future work could vary:
+- The branch point(s)
 - The time spent training apart
 - The number of branches
 - The number and types of training regimes
+
+## Limitations
+
+- **The fine-tune has no control.** No single branch was given the same 20k-update fine-tune and scored, so part of A3-ft's gain over hardmix (22 vs 19, 12.08 vs 10.83) may come from the extra training and not from the average. A3 without the fine-tune scores 18, level with hardmix within noise.
+- **A3's validation-loss advantage does not survive the fine-tune.** The loss rises from .0468 to .0580 over the 20k updates, the highest in the table, while the solve count rises.
+- **One seed and one lineage.** The branches also differ in branch point and length, not only in data.
 
 
 ## Links
